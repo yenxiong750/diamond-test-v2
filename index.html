@@ -1,3 +1,153 @@
-// Change this line in your HTML:
-const response = await fetch('/api/test-stonealgo', {
-  // ... rest stays the same
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StoneAlgo Scraping Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-4xl mx-auto p-6 min-h-screen">
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h1 class="text-3xl font-bold mb-2">🔬 StoneAlgo Scraping Test</h1>
+            <p class="text-gray-600 mb-6">
+                Test if we can extract diamond data from StoneAlgo.com for your GIA cut score calculator.
+            </p>
+            
+            <div class="mb-6">
+                <div class="flex gap-4 items-end">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            GIA Number to Test
+                        </label>
+                        <input
+                            type="text"
+                            id="giaNumber"
+                            value="6511071571"
+                            placeholder="Enter GIA Number (e.g., 6511071571)"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                    <button
+                        onclick="testScraping()"
+                        id="testButton"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Run Test
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h3 class="font-semibold text-blue-800 mb-2">What This Test Does:</h3>
+                <ul class="text-blue-700 text-sm space-y-1">
+                    <li>• Checks if we can access StoneAlgo.com from server-side</li>
+                    <li>• Tests different URL patterns for GIA lookups</li>
+                    <li>• Detects anti-bot protection (Cloudflare, CAPTCHA)</li>
+                    <li>• Attempts to extract diamond data if found</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="results" class="hidden">
+            <!-- Results will be inserted here -->
+        </div>
+
+        <div id="error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <h3 class="font-semibold">❌ Test Failed</h3>
+            <p id="errorMessage"></p>
+        </div>
+
+        <div id="status" class="hidden bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded-lg mb-6">
+            <h3 class="font-semibold">⏳ Testing in Progress</h3>
+            <p>This may take 30-60 seconds... Please wait.</p>
+        </div>
+    </div>
+
+    <script>
+        async function testScraping() {
+            const giaNumber = document.getElementById('giaNumber').value;
+            const testButton = document.getElementById('testButton');
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+            const statusDiv = document.getElementById('status');
+            
+            // Reset displays
+            resultsDiv.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+            statusDiv.classList.remove('hidden');
+            
+            // Disable button
+            testButton.disabled = true;
+            testButton.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch('/api/test-stonealgo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ giaNumber, testMode: true })
+                });
+                
+                const data = await response.json();
+                statusDiv.classList.add('hidden');
+                
+                if (response.ok) {
+                    displayResults(data);
+                } else {
+                    showError(data.error || 'Test failed');
+                }
+            } catch (err) {
+                statusDiv.classList.add('hidden');
+                showError('Network error: ' + err.message);
+            } finally {
+                testButton.disabled = false;
+                testButton.textContent = 'Run Test';
+            }
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+        
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            const successClass = data.success ? 'text-green-600' : 'text-red-600';
+            const successText = data.success ? '✅ SCRAPING FEASIBLE' : '❌ SCRAPING BLOCKED';
+            
+            resultsDiv.innerHTML = `
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-semibold">Test Results</h2>
+                        <div class="text-lg font-bold ${successClass}">
+                            ${successText}
+                        </div>
+                    </div>
+                    
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                        <h3 class="font-semibold text-green-800 mb-2">✅ Function Response</h3>
+                        <p class="text-green-700">${data.message}</p>
+                        <p class="text-sm text-green-600 mt-1">GIA Number: ${data.giaNumber}</p>
+                        <p class="text-sm text-green-600">Timestamp: ${data.timestamp}</p>
+                    </div>
+
+                    <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h3 class="font-semibold text-blue-800 mb-2">🚀 Next Steps</h3>
+                        <div class="text-blue-700 text-sm">
+                            <p>✅ Great! Your Vercel function is working perfectly!</p>
+                            <p class="mt-2">Now we can add the StoneAlgo scraping logic to test if diamond data extraction is possible.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
